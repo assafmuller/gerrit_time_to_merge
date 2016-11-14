@@ -85,7 +85,7 @@ points = filter_above_percentile(points, 95)
 x = [point[0] for point in points]
 y = [point[1] for point in points]
 
-plt.xlabel(data[0]['owner']['name'])
+plt.xlabel('%s - %s' % (data[0]['owner']['name'], args.project))
 plt.ylabel('Days to merge patch')
 plt.grid()
 
