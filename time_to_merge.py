@@ -91,6 +91,21 @@ def get_list_of_owners(people):
     return people_query[:-4]
 
 
+def moving_average(x, n):
+    """
+    compute an n period moving average.
+    Stolen from:
+    http://matplotlib.org/examples/pylab_examples/finance_work2.html
+    """
+    x = np.asarray(x)
+    weights = np.ones(n)
+    weights /= weights.sum()
+
+    a = np.convolve(x, weights, mode='full')[:len(x)]
+    a[:n] = a[n]
+    return a
+
+
 data = get_json_data_from_query(
     "status:merged branch:master project:%(project)s \(%(owner)s\)" %
     {'project': args.project,
@@ -117,8 +132,10 @@ plt.grid()
 regression_line = np.polyfit(x, y, 1)
 regression_line_function = np.poly1d(regression_line)
 
+averages = moving_average(y, len(x) / 10)
+
 # Plot the data points as well as the regression line
-plt.plot(x, y, '.', x, regression_line_function(x), '-')
+plt.plot(x, y, '.', x, regression_line_function(x), '-', x, averages)
 
 x_axis = range(0, x[-1], max(1, x[-1] / 10))  # 0 to last point, 10 hops
 
