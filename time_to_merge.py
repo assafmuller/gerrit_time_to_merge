@@ -105,7 +105,11 @@ points = filter_above_percentile(points, 95)
 x = [point[0] for point in points]
 y = [point[1] for point in points]
 
-plt.xlabel('%s - %s' % (' '.join(args.owner), args.project))
+print 'Average: %s, median: %s' % (
+    (int(round(np.average(y))), int(round(np.median(y)))))
+
+plt.xlabel('%s - %s - %s patches' %
+           (' '.join(args.owner), args.project, len(data)))
 plt.ylabel('Days to merge patch')
 plt.grid()
 
