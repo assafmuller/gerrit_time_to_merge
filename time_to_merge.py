@@ -20,13 +20,14 @@ def exec_cmd(command):
 
 parser = argparse.ArgumentParser(
     description='Generate a graph decipting how long it took patches to get '
-                'merged over time for a given user and project.')
-parser.add_argument(
-    'owner',
-    help='The Gerrit username. For example amuller.')
+                'merged over time for a given user(s) and project.')
 parser.add_argument(
     'project',
     help='The OpenStack project to query. For example openstack/neutron.')
+parser.add_argument(
+    'owner',
+    nargs='*',
+    help='A list of one or more Gerrit usernames. For example foo bar.')
 args = parser.parse_args()
 
 
@@ -34,6 +35,8 @@ def get_json_data_from_query(query):
     result, error = exec_cmd(
         'ssh -p 29418 review.openstack.org gerrit query %s --format=json' %
         query)
+
+    print query
 
     if error:
         print error
@@ -72,9 +75,17 @@ def filter_above_percentile(points, percentile):
     return [point for point in points if point[1] < percentile]
 
 
+def get_list_of_owners(people):
+    people_query = ''
+    for person in people:
+        people_query += 'owner:%s OR ' % person
+    return people_query[:-4]
+
+
 data = get_json_data_from_query(
-    'status:merged branch:master owner:%(owner)s project:%(project)s' %
-    {'owner': args.owner, 'project': args.project})
+    "status:merged branch:master project:%(project)s \(%(owner)s\)" %
+    {'project': args.project,
+     'owner': get_list_of_owners(args.owner)})
 
 start = datetime.date.fromtimestamp(data[0]['createdOn'])
 
