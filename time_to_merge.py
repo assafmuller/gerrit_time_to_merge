@@ -32,22 +32,31 @@ args = parser.parse_args()
 
 
 def get_json_data_from_query(query):
-    result, error = exec_cmd(
-        'ssh -p 29418 review.openstack.org gerrit query %s --format=json' %
-        query)
-
     print query
+    data = []
+    start = 0
 
-    if error:
-        print error
-        sys.exit(1)
+    while True:
+        result, error = exec_cmd(
+            'ssh -p 29418 review.openstack.org gerrit query --start %(start)s %(query)s --format=json' %
+            {'start': start,
+             'query': query})
 
-    lines = result.split('\n')
-    data = [json.loads(line) for line in lines[:-2]]
+        if error:
+            print error
+            sys.exit(1)
 
-    if not data:
-        print 'No patches found!'
-        sys.exit(1)
+        lines = result.split('\n')[:-2]
+        data += [json.loads(line) for line in lines]
+
+        if not data:
+            print 'No patches found!'
+            sys.exit(1)
+
+        start += len(lines)
+        more_changes = json.loads(result.split('\n')[-2])['moreChanges']
+        if not more_changes:
+            break
 
     print 'Found metadata for %s patches' % len(data)
     data = sorted(data, key=lambda x: x['createdOn'])
