@@ -76,8 +76,25 @@ def get_submission_timestamp(patch):
         (approval['grantedOn'] for approval in approvals if approval['type'] == 'SUBM'))
 
 
+def get_loc(patch):
+    return patch['currentPatchSet']['sizeInsertions']
+
+
+def get_color(loc, max_loc):
+    max_loc = float(max_loc)
+    loc = min(max_loc, loc)
+    return (loc / max_loc,  1.0 - (loc / max_loc), 0)
+
+
 def get_points_from_data(data):
     points = []
+
+    max_loc = 0
+    for patch in data:
+        loc = get_loc(patch)
+        if loc > max_loc:
+            max_loc = loc
+    max_loc = 0.666 * max_loc
 
     for patch in data:
         creation = datetime.date.fromtimestamp(patch['createdOn'])
@@ -88,7 +105,7 @@ def get_points_from_data(data):
         # Gerrit has a weird issue where some old patches have a bogus
         # createdOn value
         if y_value > 0:
-            points.append((x_value, y_value))
+            points.append((x_value, y_value, get_color(get_loc(patch), max_loc)))
 
     return points
 
@@ -99,10 +116,10 @@ def filter_above_percentile(points, percentile):
 
 
 def get_list_of_owners(people):
-    people_query = ''
+    people_query = '\('
     for person in people:
         people_query += 'owner:%s OR ' % person
-    return people_query[:-4]
+    return '%s\)' % people_query[:-4]
 
 
 def moving_average(x, n):
@@ -153,7 +170,9 @@ regression_line_function = np.poly1d(regression_line)
 averages = moving_average(y, len(x) / 10)
 
 # Plot the data points as well as the regression line
-plt.plot(x, y, '.', x, regression_line_function(x), '-', x, averages)
+plt.plot(x, averages)
+
+plt.scatter(x, y, c=[point[2] for point in points])
 
 x_axis = range(0, x[-1], max(1, x[-1] / 10))  # 0 to last point, 10 hops
 
@@ -163,4 +182,6 @@ x_axis_dates = [
     str(start + datetime.timedelta(days=day_delta)) for day_delta in x_axis]
 plt.xticks(x_axis, x_axis_dates, rotation=45)
 
+plt.xlim(xmin=0)
+plt.ylim(ymin=0)
 plt.show()
