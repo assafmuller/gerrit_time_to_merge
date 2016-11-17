@@ -171,7 +171,15 @@ averages = moving_average(y, len(x) / 10)
 # Plot the data points as well as the regression line
 plt.plot(x, averages)
 
-plt.scatter(x, y, c=[point[2] for point in points], s=35)
+colors = [point[2] for point in points]
+
+
+def to_grey(r, g, b):
+    return 0.21 * r + 0.72 * g + 0.07 * b
+
+
+size = [(1.0 - (to_grey(r, g, b))) * 70 for (r, g, b) in colors]
+plt.scatter(x, y, c=colors, s=size)
 
 x_axis = range(0, x[-1], max(1, x[-1] / 10))  # 0 to last point, 10 hops
 
