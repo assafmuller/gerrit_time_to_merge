@@ -81,20 +81,19 @@ def get_loc(patch):
 
 
 def get_color(loc, max_loc):
-    max_loc = float(max_loc)
-    loc = min(max_loc, loc)
+    """Calculate a color between green and red.
+    :param loc: How many lines of code?
+    :param max_loc: The value of lines of code over which we return full red
+    :return: (r, g, b) tuple
+    """
+    loc = min(loc, max_loc)  # Patches may have more LOC than the max we calculated, for example 75th percentile.
     return (loc / max_loc,  1.0 - (loc / max_loc), 0)
 
 
 def get_points_from_data(data):
     points = []
 
-    max_loc = 0
-    for patch in data:
-        loc = get_loc(patch)
-        if loc > max_loc:
-            max_loc = loc
-    max_loc = 0.666 * max_loc
+    average_loc = np.percentile([get_loc(patch) for patch in data], 75)
 
     for patch in data:
         creation = datetime.date.fromtimestamp(patch['createdOn'])
@@ -105,7 +104,7 @@ def get_points_from_data(data):
         # Gerrit has a weird issue where some old patches have a bogus
         # createdOn value
         if y_value > 0:
-            points.append((x_value, y_value, get_color(get_loc(patch), max_loc)))
+            points.append((x_value, y_value, get_color(get_loc(patch), average_loc)))
 
     return points
 
