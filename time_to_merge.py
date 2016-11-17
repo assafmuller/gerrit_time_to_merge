@@ -67,7 +67,7 @@ def get_json_data_from_query(query):
 def get_submission_timestamp(patch):
     approvals = patch['currentPatchSet']['approvals']
     return next(
-        approval['grantedOn'] for approval in approvals if approval['type'] == 'SUBM')
+        (approval['grantedOn'] for approval in approvals if approval['type'] == 'SUBM'))
 
 def get_points_from_data(data):
     points = []
@@ -121,6 +121,10 @@ data = get_json_data_from_query(query)
 start = datetime.date.fromtimestamp(data[0]['createdOn'])
 
 points = get_points_from_data(data)
+
+if not points:
+    print 'Could not parse points from data. It is likely that the createdOn timestamp of the patches found is bogus.'
+    sys.exit(1)
 
 points = filter_above_percentile(points, 95)
 
