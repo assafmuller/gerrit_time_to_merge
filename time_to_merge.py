@@ -29,9 +29,6 @@ parser.add_argument(
     'owner',
     nargs='*',
     help='A list of zero or more Gerrit usernames. For example foo bar.')
-parser.add_argument(
-    '--last',
-    help='Only patches that were merged in the last, for example, 50d or 1y.')
 args = parser.parse_args()
 
 
@@ -45,8 +42,6 @@ def get_json_data_from_query(query):
             'ssh -p 29418 review.openstack.org gerrit query --current-patch-set --start %(start)s %(query)s --format=json' %
             {'start': start,
              'query': query})
-        if args.last:
-            gerrit_cmd += ' -- -age:%s' % args.last
         result, error = exec_cmd(gerrit_cmd)
 
         if error:
