@@ -20,14 +20,15 @@ def exec_cmd(command):
 
 parser = argparse.ArgumentParser(
     description='Generate a graph decipting how long it took patches to get '
-                'merged over time for a given user(s) and project.')
+                'merged over time for a given project or a subset of its '
+                'contributors.')
 parser.add_argument(
     'project',
     help='The OpenStack project to query. For example openstack/neutron.')
 parser.add_argument(
     'owner',
     nargs='*',
-    help='A list of one or more Gerrit usernames. For example foo bar.')
+    help='A list of zero or more Gerrit usernames. For example foo bar.')
 args = parser.parse_args()
 
 
@@ -53,12 +54,12 @@ def get_json_data_from_query(query):
             print 'No patches found!'
             sys.exit(1)
 
+        print 'Found metadata for %s more patches, %s total so far' % (len(lines), len(data))
         start += len(lines)
         more_changes = json.loads(result.split('\n')[-2])['moreChanges']
         if not more_changes:
             break
 
-    print 'Found metadata for %s patches' % len(data)
     data = sorted(data, key=lambda x: x['createdOn'])
     return data
 
@@ -106,10 +107,10 @@ def moving_average(x, n):
     return a
 
 
-data = get_json_data_from_query(
-    "status:merged branch:master project:%(project)s \(%(owner)s\)" %
-    {'project': args.project,
-     'owner': get_list_of_owners(args.owner)})
+query = "status:merged branch:master project:%s " % args.project
+if args.owner:
+    query += get_list_of_owners(args.owner)
+data = get_json_data_from_query(query)
 
 start = datetime.date.fromtimestamp(data[0]['createdOn'])
 
