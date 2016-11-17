@@ -77,7 +77,7 @@ def get_submission_timestamp(patch):
 
 
 def get_loc(patch):
-    return patch['currentPatchSet']['sizeInsertions']
+    return max(0, patch['currentPatchSet']['sizeInsertions'] - patch['currentPatchSet']['sizeDeletions'])
 
 
 def get_color(loc, max_loc):
