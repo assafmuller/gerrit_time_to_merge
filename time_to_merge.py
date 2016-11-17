@@ -39,7 +39,7 @@ def get_json_data_from_query(query):
 
     while True:
         result, error = exec_cmd(
-            'ssh -p 29418 review.openstack.org gerrit query --start %(start)s %(query)s --format=json' %
+            'ssh -p 29418 review.openstack.org gerrit query --current-patch-set --start %(start)s %(query)s --format=json' %
             {'start': start,
              'query': query})
 
@@ -64,14 +64,20 @@ def get_json_data_from_query(query):
     return data
 
 
+def get_submission_timestamp(patch):
+    approvals = patch['currentPatchSet']['approvals']
+    return next(
+        approval['grantedOn'] for approval in approvals if approval['type'] == 'SUBM')
+
 def get_points_from_data(data):
     points = []
 
     for patch in data:
         creation = datetime.date.fromtimestamp(patch['createdOn'])
-        updated = datetime.date.fromtimestamp(patch['lastUpdated'])
+        submitted = datetime.date.fromtimestamp(
+            get_submission_timestamp(patch))
         x_value = (creation - start).days
-        y_value = (updated - creation).days
+        y_value = (submitted - creation).days
         # Gerrit has a weird issue where some old patches have a bogus
         # createdOn value
         if y_value > 0:
