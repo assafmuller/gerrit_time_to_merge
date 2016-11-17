@@ -77,7 +77,7 @@ def get_submission_timestamp(patch):
 
 
 def get_loc(patch):
-    return max(0, patch['currentPatchSet']['sizeInsertions'] - patch['currentPatchSet']['sizeDeletions'])
+    return max(0, patch['currentPatchSet']['sizeInsertions'] + patch['currentPatchSet']['sizeDeletions'])
 
 
 def get_color(loc, max_loc):
@@ -94,6 +94,7 @@ def get_points_from_data(data):
     points = []
 
     average_loc = np.percentile([get_loc(patch) for patch in data], 75)
+    print 'Average lines of code: %s' % average_loc
 
     for patch in data:
         creation = datetime.date.fromtimestamp(patch['createdOn'])
