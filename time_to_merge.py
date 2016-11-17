@@ -46,7 +46,6 @@ def get_json_data_from_query(query):
             {'start': start,
              'query': query})
         if args.last:
-            print args.last
             gerrit_cmd += ' -- -age:%s' % args.last
         result, error = exec_cmd(gerrit_cmd)
 
