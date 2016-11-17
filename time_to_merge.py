@@ -66,7 +66,11 @@ def get_json_data_from_query(query):
 
 
 def get_submission_timestamp(patch):
-    approvals = patch['currentPatchSet']['approvals']
+    try:
+        approvals = patch['currentPatchSet']['approvals']  # Not all patches have approvals data
+    except KeyError:
+        return patch['lastUpdated']
+
     # Weirdly enough some patches don't have submission data. Take lastUpdated instead.
     return next(
         (approval['grantedOn'] for approval in approvals if approval['type'] == 'SUBM'), patch['lastUpdated'])
