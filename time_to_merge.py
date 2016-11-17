@@ -19,7 +19,7 @@ def exec_cmd(command):
 
 
 parser = argparse.ArgumentParser(
-    description='Generate a graph decipting how long it took patches to get '
+    description='Generate a graph depicting how long it took patches to get '
                 'merged over time for a given project or a subset of its '
                 'contributors.')
 parser.add_argument(
@@ -29,6 +29,9 @@ parser.add_argument(
     'owner',
     nargs='*',
     help='A list of zero or more Gerrit usernames. For example foo bar.')
+parser.add_argument(
+    '--last',
+    help='Only patches that were merged in the last, for example, 50d or 1y.')
 args = parser.parse_args()
 
 
@@ -38,10 +41,14 @@ def get_json_data_from_query(query):
     start = 0
 
     while True:
-        result, error = exec_cmd(
+        gerrit_cmd = (
             'ssh -p 29418 review.openstack.org gerrit query --current-patch-set --start %(start)s %(query)s --format=json' %
             {'start': start,
              'query': query})
+        if args.last:
+            print args.last
+            gerrit_cmd += ' -- -age:%s' % args.last
+        result, error = exec_cmd(gerrit_cmd)
 
         if error:
             print error
@@ -68,6 +75,7 @@ def get_submission_timestamp(patch):
     approvals = patch['currentPatchSet']['approvals']
     return next(
         (approval['grantedOn'] for approval in approvals if approval['type'] == 'SUBM'))
+
 
 def get_points_from_data(data):
     points = []
