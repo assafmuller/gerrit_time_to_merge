@@ -161,7 +161,7 @@ print 'Average: %s, median: %s' % (
 plt.xlabel('%s - %s - %s patches' %
            (' '.join(args.owner), args.project, len(data)))
 plt.ylabel('Days to merge patch')
-plt.grid()
+plt.grid(axis='y')
 
 # Generate a linear regression line
 regression_line = np.polyfit(x, y, 1)
@@ -170,6 +170,7 @@ regression_line_function = np.poly1d(regression_line)
 averages = moving_average(y, len(x) / 10)
 
 # Plot the data points as well as the regression line
+plt.style.use('fivethirtyeight')
 plt.plot(x, averages)
 
 colors = [point[2] for point in points]
@@ -180,7 +181,7 @@ def to_grey(r, g, b):
 
 
 size = [(1.0 - (to_grey(r, g, b))) * 70 for (r, g, b) in colors]
-plt.scatter(x, y, c=colors, s=size)
+plt.scatter(x, y, c=colors, s=size, alpha=0.7)
 
 x_axis = range(0, x[-1], max(1, x[-1] / 10))  # 0 to last point, 10 hops
 
