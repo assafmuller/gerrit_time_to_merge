@@ -8,6 +8,7 @@ import sys
 
 import numpy as np
 import matplotlib.pyplot as plt
+import pandas
 
 
 def exec_cmd(command):
@@ -122,19 +123,8 @@ def get_list_of_owners(people):
     return '%s\)' % people_query[:-4]
 
 
-def moving_average(x, n):
-    """
-    compute an n period moving average.
-    Stolen from:
-    http://matplotlib.org/examples/pylab_examples/finance_work2.html
-    """
-    x = np.asarray(x)
-    weights = np.ones(n)
-    weights /= weights.sum()
-
-    a = np.convolve(x, weights, mode='full')[:len(x)]
-    a[:n] = a[n]
-    return a
+def moving_average(data, window):
+    return pandas.Series(data).rolling(window=window).mean()
 
 
 query = "status:merged branch:master project:%s " % args.project
@@ -167,7 +157,8 @@ plt.grid(axis='y')
 regression_line = np.polyfit(x, y, 1)
 regression_line_function = np.poly1d(regression_line)
 
-averages = moving_average(y, len(x) / 10)
+window = min(len(x) / 10, 60)
+averages = moving_average(y, window)
 
 # Plot the data points as well as the regression line
 plt.style.use('fivethirtyeight')
@@ -193,5 +184,5 @@ plt.xticks(x_axis, x_axis_dates, rotation=45)
 
 plt.xlim(xmin=0)
 plt.ylim(ymin=0)
-plt.legend(['10 day moving average', 'Lines of code, small & green to large & red'])
+plt.legend(['%s day moving average' % window, 'Lines of code, small & green to large & red'])
 plt.show()
