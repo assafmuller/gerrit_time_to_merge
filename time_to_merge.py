@@ -193,4 +193,5 @@ plt.xticks(x_axis, x_axis_dates, rotation=45)
 
 plt.xlim(xmin=0)
 plt.ylim(ymin=0)
+plt.legend(['10 day moving average', 'Lines of code, small & green to large & red'])
 plt.show()
