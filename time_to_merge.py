@@ -94,8 +94,9 @@ def get_color(loc, max_loc):
 def get_points_from_data(data):
     points = []
 
-    average_loc = np.percentile([get_loc(patch) for patch in data], 75)
-    print 'Average lines of code: %s' % average_loc
+    percentile = 75
+    average_loc = np.percentile([get_loc(patch) for patch in data], percentile)
+    print 'Lines of code %s percentile: %s' % (percentile, average_loc)
 
     for patch in data:
         creation = datetime.date.fromtimestamp(patch['createdOn'])
@@ -145,7 +146,7 @@ points = filter_above_percentile(points, 95)
 x = [point[0] for point in points]
 y = [point[1] for point in points]
 
-print 'Average: %s, median: %s' % (
+print 'Average days to merge patches: %s, median: %s' % (
     (int(round(np.average(y))), int(round(np.median(y)))))
 
 plt.xlabel('%s - %s - %s patches' %
