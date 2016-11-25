@@ -182,4 +182,6 @@ plt.xticks(x_axis, x_axis_dates, rotation=45)
 plt.xlim(xmin=0)
 plt.ylim(ymin=0)
 plt.legend(['Moving mean of the last %s patches' % window, 'Lines of code, small & green to large & red'])
+owners = '_'.join(args.owner) + '_' if args.owner else ''
+plt.gcf().canvas.set_window_title(owners + args.project)
 plt.show()
