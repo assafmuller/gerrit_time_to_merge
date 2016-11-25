@@ -11,6 +11,9 @@ import matplotlib.pyplot as plt
 import pandas
 
 
+LOC_PERCENTILE = 75
+
+
 def exec_cmd(command):
     process = subprocess.Popen(
         command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
@@ -91,12 +94,15 @@ def get_color(loc, max_loc):
     return (loc / max_loc,  1.0 - (loc / max_loc), 0)
 
 
+def get_average_loc(lines_of_code):
+    return np.percentile(lines_of_code, LOC_PERCENTILE)
+
+
 def get_points_from_data(data):
     points = []
 
-    percentile = 75
-    average_loc = np.percentile([get_loc(patch) for patch in data], percentile)
-    print 'Lines of code %s percentile: %s' % (percentile, average_loc)
+    average_loc = get_average_loc([get_loc(patch) for patch in data])
+    print 'Lines of code %s percentile: %s' % (LOC_PERCENTILE, average_loc)
 
     for patch in data:
         creation = datetime.date.fromtimestamp(patch['createdOn'])
@@ -107,14 +113,14 @@ def get_points_from_data(data):
         # Gerrit has a weird issue where some old patches have a bogus
         # createdOn value
         if y_value > 0:
-            points.append((x_value, y_value, get_color(get_loc(patch), average_loc)))
+            points.append({'date': x_value, 'days_to_merge': y_value, 'loc': get_loc(patch)})
 
     return points
 
 
 def filter_above_percentile(points, percentile):
-    percentile = np.percentile([point[1] for point in points], percentile)
-    return [point for point in points if point[1] < percentile]
+    percentile = np.percentile([point['days_to_merge'] for point in points], percentile)
+    return [point for point in points if point['days_to_merge'] < percentile]
 
 
 def get_list_of_owners(people):
@@ -143,8 +149,8 @@ if not points:
 
 points = filter_above_percentile(points, 95)
 
-x = [point[0] for point in points]
-y = [point[1] for point in points]
+x = [point['date'] for point in points]
+y = [point['days_to_merge'] for point in points]
 
 print 'Average days to merge patches: %s, median: %s' % (
     (int(round(np.average(y))), int(round(np.median(y)))))
@@ -162,7 +168,8 @@ plt.style.use('fivethirtyeight')
 # Plot the patches
 plt.plot(x, averages)
 
-colors = [point[2] for point in points]
+average_loc = get_average_loc([get_loc(patch) for patch in data])
+colors = [get_color(point['loc'], average_loc) for point in points]
 
 
 def to_grey(r, g, b):
