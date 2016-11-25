@@ -101,6 +101,7 @@ def get_average_loc(lines_of_code):
 def get_points_from_data(data):
     points = []
 
+    start = datetime.date.fromtimestamp(data[0]['createdOn'])
     average_loc = get_average_loc([get_loc(patch) for patch in data])
     print 'Lines of code %s percentile: %s' % (LOC_PERCENTILE, average_loc)
 
@@ -118,11 +119,6 @@ def get_points_from_data(data):
     return points
 
 
-def filter_above_percentile(points, percentile):
-    percentile = np.percentile([point['days_to_merge'] for point in points], percentile)
-    return [point for point in points if point['days_to_merge'] < percentile]
-
-
 def get_list_of_owners(people):
     people_query = '\('
     for person in people:
@@ -134,62 +130,91 @@ def moving_average(data, window):
     return pandas.Series(data).rolling(window=window).mean()
 
 
+def get_current_figure():
+    global CURRENT_FIGURE
+    plt.figure(CURRENT_FIGURE)
+    CURRENT_FIGURE += 1
+
+
+def calculate_time_to_merge_figure(points, title):
+    get_current_figure()
+    plt.gcf().canvas.set_window_title(title)
+
+    percentile = np.percentile([point['days_to_merge'] for point in points], 95)
+    points = [point for point in points if point['days_to_merge'] < percentile]
+
+    x = [point['date'] for point in points]
+    y = [point['days_to_merge'] for point in points]
+
+    print 'Average days to merge patches: %s, median: %s' % (
+        (int(round(np.average(y))), int(round(np.median(y)))))
+
+    plt.xlabel('%s patches' % len(data))
+    plt.ylabel('Days to merge patch')
+    plt.grid(axis='y')
+
+    window = min(len(x) / 10, 60)
+    averages = moving_average(y, window)
+
+    # Plot the patches
+    plt.plot(x, averages)
+
+    average_loc = get_average_loc([get_loc(patch) for patch in data])
+    colors = [get_color(point['loc'], average_loc) for point in points]
+
+    def to_grey(r, g, b):
+        return 0.21 * r + 0.72 * g + 0.07 * b
+
+    size = [(1.0 - (to_grey(r, g, b))) * 70 for (r, g, b) in colors]
+    plt.scatter(x, y, s=size, c=colors, alpha=0.75)
+
+    x_axis = range(0, x[-1], max(1, x[-1] / 10))  # 0 to last point, 10 hops
+
+    # Generate a date from each hop relative to the date the first patch was
+    # contributed
+    start = datetime.date.fromtimestamp(data[0]['createdOn'])
+    x_axis_dates = [
+        str(start + datetime.timedelta(days=day_delta)) for day_delta in x_axis]
+    plt.xticks(x_axis, x_axis_dates, rotation=45)
+
+    plt.xlim(xmin=-5)
+    plt.ylim(ymin=-5)
+    plt.legend(['Moving mean of the last %s patches' % window, 'Lines of code, small & green to large & red'])
+    plt.gcf().subplots_adjust(bottom=0.15)
+
+
+def calculate_loc_correlation(points, title):
+    get_current_figure()
+    plt.gcf().canvas.set_window_title(title)
+    points = [point for point in points if point['loc'] <= 500]
+
+    x = [point['loc'] for point in points]
+    y = [point['days_to_merge'] for point in points]
+
+    plt.xlabel('%s patches' % len(data))
+    plt.ylabel('Days to merge patch')
+
+    plt.scatter(x, y)
+
+    plt.xlim(xmin=-5)
+    plt.ylim(ymin=-5)
+
+
 query = "status:merged branch:master project:%s " % args.project
 if args.owner:
     query += get_list_of_owners(args.owner)
 data = get_json_data_from_query(query)
-
-start = datetime.date.fromtimestamp(data[0]['createdOn'])
-
 points = get_points_from_data(data)
 
 if not points:
     print 'Could not parse points from data. It is likely that the createdOn timestamp of the patches found is bogus.'
     sys.exit(1)
 
-points = filter_above_percentile(points, 95)
-
-x = [point['date'] for point in points]
-y = [point['days_to_merge'] for point in points]
-
-print 'Average days to merge patches: %s, median: %s' % (
-    (int(round(np.average(y))), int(round(np.median(y)))))
-
-plt.xlabel('%s - %s - %s patches' %
-           (' '.join(args.owner), args.project, len(data)))
-plt.ylabel('Days to merge patch')
-plt.grid(axis='y')
-
-window = min(len(x) / 10, 60)
-averages = moving_average(y, window)
-
 plt.style.use('fivethirtyeight')
 
-# Plot the patches
-plt.plot(x, averages)
-
-average_loc = get_average_loc([get_loc(patch) for patch in data])
-colors = [get_color(point['loc'], average_loc) for point in points]
-
-
-def to_grey(r, g, b):
-    return 0.21 * r + 0.72 * g + 0.07 * b
-
-
-size = [(1.0 - (to_grey(r, g, b))) * 70 for (r, g, b) in colors]
-plt.scatter(x, y, c=colors, s=size, alpha=0.7)
-
-x_axis = range(0, x[-1], max(1, x[-1] / 10))  # 0 to last point, 10 hops
-
-# Generate a date from each hop relative to the date the first patch was
-# contributed
-x_axis_dates = [
-    str(start + datetime.timedelta(days=day_delta)) for day_delta in x_axis]
-plt.xticks(x_axis, x_axis_dates, rotation=45)
-
-plt.xlim(xmin=0)
-plt.ylim(ymin=0)
-plt.legend(['Moving mean of the last %s patches' % window, 'Lines of code, small & green to large & red'])
-owners = '_'.join(args.owner) + '_' if args.owner else ''
-plt.gcf().canvas.set_window_title(owners + args.project)
+CURRENT_FIGURE = 1
+owners = ' '.join(args.owner) + ' - ' if args.owner else ''
+title = owners + args.project
+calculate_time_to_merge_figure(points, 'Time to merge - ' + title)
+calculate_loc_correlation(points, 'Lines of code - ' + title)
 plt.show()
