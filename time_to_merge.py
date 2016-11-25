@@ -153,15 +153,12 @@ plt.xlabel('%s - %s - %s patches' %
 plt.ylabel('Days to merge patch')
 plt.grid(axis='y')
 
-# Generate a linear regression line
-regression_line = np.polyfit(x, y, 1)
-regression_line_function = np.poly1d(regression_line)
-
 window = min(len(x) / 10, 60)
 averages = moving_average(y, window)
 
-# Plot the data points as well as the regression line
 plt.style.use('fivethirtyeight')
+
+# Plot the patches
 plt.plot(x, averages)
 
 colors = [point[2] for point in points]
@@ -184,5 +181,5 @@ plt.xticks(x_axis, x_axis_dates, rotation=45)
 
 plt.xlim(xmin=0)
 plt.ylim(ymin=0)
-plt.legend(['%s day moving average' % window, 'Lines of code, small & green to large & red'])
+plt.legend(['Moving mean of the last %s patches' % window, 'Lines of code, small & green to large & red'])
 plt.show()
