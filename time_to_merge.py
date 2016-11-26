@@ -37,7 +37,7 @@ args = parser.parse_args()
 
 
 def get_json_data_from_query(query):
-    print query
+    print(query)
     data = []
     start = 0
 
@@ -49,17 +49,17 @@ def get_json_data_from_query(query):
         result, error = exec_cmd(gerrit_cmd)
 
         if error:
-            print error
+            print(error)
             sys.exit(1)
 
         lines = result.split('\n')[:-2]
         data += [json.loads(line) for line in lines]
 
         if not data:
-            print 'No patches found!'
+            print('No patches found!')
             sys.exit(1)
 
-        print 'Found metadata for %s more patches, %s total so far' % (len(lines), len(data))
+        print('Found metadata for %s more patches, %s total so far' % (len(lines), len(data)))
         start += len(lines)
         more_changes = json.loads(result.split('\n')[-2])['moreChanges']
         if not more_changes:
@@ -103,7 +103,7 @@ def get_points_from_data(data):
 
     start = datetime.date.fromtimestamp(data[0]['createdOn'])
     average_loc = get_average_loc([get_loc(patch) for patch in data])
-    print 'Lines of code %s percentile: %s' % (LOC_PERCENTILE, average_loc)
+    print('Lines of code %s percentile: %s' % (LOC_PERCENTILE, average_loc))
 
     for patch in data:
         creation = datetime.date.fromtimestamp(patch['createdOn'])
@@ -146,8 +146,8 @@ def calculate_time_to_merge_figure(points, title):
     x = [point['date'] for point in points]
     y = [point['days_to_merge'] for point in points]
 
-    print 'Average days to merge patches: %s, median: %s' % (
-        (int(round(np.average(y))), int(round(np.median(y)))))
+    print('Average days to merge patches: %s, median: %s' % (
+         (int(round(np.average(y))), int(round(np.median(y))))))
 
     plt.xlabel('%s patches' % len(data))
     plt.ylabel('Days to merge patch')
@@ -210,7 +210,7 @@ data = get_json_data_from_query(query)
 points = get_points_from_data(data)
 
 if not points:
-    print 'Could not parse points from data. It is likely that the createdOn timestamp of the patches found is bogus.'
+    print('Could not parse points from data. It is likely that the createdOn timestamp of the patches found is bogus.')
     sys.exit(1)
 
 plt.style.use('fivethirtyeight')
