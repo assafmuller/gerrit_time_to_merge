@@ -189,7 +189,7 @@ def calculate_loc_correlation(points, title):
 
     percentile_time = np.percentile([point['days_to_merge'] for point in points], 95)
     percentile_loc = np.percentile([point['loc'] for point in points], 95)
-    #points = [point for point in points if (point['days_to_merge'] < percentile_time and point['loc'] < percentile_loc)]
+    points = [point for point in points if (point['days_to_merge'] < percentile_time and point['loc'] < percentile_loc)]
 
     x = [point['loc'] for point in points]
     y = [point['days_to_merge'] for point in points]
