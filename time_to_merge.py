@@ -136,6 +136,22 @@ def get_current_figure():
     CURRENT_FIGURE += 1
 
 
+def set_fullscreen():
+    # http://stackoverflow.com/questions/12439588/how-to-maximize-a-plt-show-window-using-python
+
+    mng = plt.get_current_fig_manager()
+    try:
+        mng.frame.Maximize(True)
+    except AttributeError:
+        try:
+            mng.window.showMaximized()
+        except AttributeError:
+            try:
+                mng.resize(*mng.window.maxsize())
+            except AttributeError:
+                pass
+
+
 def calculate_time_to_merge_figure(points, title):
     get_current_figure()
     plt.gcf().canvas.set_window_title(title)
@@ -182,6 +198,8 @@ def calculate_time_to_merge_figure(points, title):
     plt.legend(['Moving mean of the last %s patches' % window, 'Lines of code, small & green to large & red'])
     plt.gcf().subplots_adjust(bottom=0.15)
 
+    set_fullscreen()
+
 
 def calculate_loc_correlation(points, title):
     get_current_figure()
@@ -201,6 +219,8 @@ def calculate_loc_correlation(points, title):
 
     plt.xlim(xmin=-5)
     plt.ylim(ymin=-5)
+
+    set_fullscreen()
 
 
 query = "status:merged branch:master project:%s " % args.project
