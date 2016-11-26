@@ -217,7 +217,7 @@ plt.style.use('fivethirtyeight')
 
 CURRENT_FIGURE = 1
 owners = ' '.join(args.owner) + ' - ' if args.owner else ''
-title = owners + args.project
+title = (owners + args.project).replace('/', '_')
 calculate_time_to_merge_figure(points, 'Time to merge - ' + title)
 calculate_loc_correlation(points, 'Lines of code - ' + title)
 plt.show()
