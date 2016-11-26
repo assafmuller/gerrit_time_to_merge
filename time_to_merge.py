@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 import argparse
+from collections import defaultdict
 import datetime
 import json
 import subprocess
@@ -114,7 +115,11 @@ def get_points_from_data(data):
         # Gerrit has a weird issue where some old patches have a bogus
         # createdOn value
         if y_value > 0:
-            points.append({'date': x_value, 'days_to_merge': y_value, 'loc': get_loc(patch)})
+            points.append({
+                'date': x_value,
+                'days_to_merge': y_value,
+                'loc': get_loc(patch),
+                'author': get_patch_author(patch)})
 
     return points
 
@@ -212,13 +217,44 @@ def calculate_loc_correlation(points, title):
     x = [point['loc'] for point in points]
     y = [point['days_to_merge'] for point in points]
 
-    plt.xlabel('%s patches' % len(data))
+    plt.xlabel('Lines of code')
     plt.ylabel('Days to merge patch')
 
     plt.scatter(x, y)
 
     plt.xlim(xmin=-5)
     plt.ylim(ymin=-5)
+
+    set_fullscreen()
+
+
+def get_patch_author(patch):
+    return patch['owner']['username']
+
+
+def calculate_author_patches_time_to_merge(points, title):
+    get_current_figure()
+    plt.gcf().canvas.set_window_title(title)
+
+    percentile = np.percentile([point['days_to_merge'] for point in points], 95)
+    points = [point for point in points if point['days_to_merge'] < percentile]
+
+    authors = defaultdict(list)  # A map from author to how many days it took to merge each of his/her patches
+    for point in points:
+        authors[point['author']].append(point['days_to_merge'])
+
+    x = []
+    y = []
+    for author, patches in authors.items():
+        x.append(len(patches))  # How many patches
+        y.append(np.average(patches))  # The average of how long it took to merge the patches
+
+    plt.xlabel('Patches by author')
+    plt.ylabel('Days to merge patch per author')
+    plt.scatter(x, y)
+
+    plt.xlim(-5, max(x) + 5)
+    plt.ylim(-5, max(y) + 5)
 
     set_fullscreen()
 
@@ -240,4 +276,5 @@ owners = ' '.join(args.owner) + ' - ' if args.owner else ''
 title = (owners + args.project).replace('/', '_')
 calculate_time_to_merge_figure(points, 'Time to merge - ' + title)
 calculate_loc_correlation(points, 'Lines of code - ' + title)
+calculate_author_patches_time_to_merge(points, 'Time to merge per author - ' + title)
 plt.show()
