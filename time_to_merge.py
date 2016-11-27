@@ -92,8 +92,9 @@ def get_color(loc, max_loc):
     :param max_loc: The value of lines of code over which we return full red
     :return: (r, g, b) tuple
     """
+
     loc = min(loc, max_loc)  # Patches may have more LOC than the max we calculated, for example 75th percentile.
-    return (loc / max_loc,  1.0 - (loc / max_loc), 0)
+    return (loc / max_loc, 1.0 - (loc / max_loc), 0)
 
 
 def get_average_loc(lines_of_code):
@@ -106,7 +107,6 @@ def get_points_from_data(data):
             return patch['owner']['username']
         except KeyError:  # Not all patches on Gerrit have an owner username interestingly enough
             return
-
 
     points = []
 
@@ -183,7 +183,7 @@ def calculate_time_to_merge_figure(points):
     y = [point['days_to_merge'] for point in points]
 
     print('Average days to merge patches: %s, median: %s' % (
-         (int(round(np.average(y))), int(round(np.median(y))))))
+          (int(round(np.average(y))), int(round(np.median(y))))))
 
     plt.xlabel('%s patches' % len(data))
     plt.ylabel('Days to merge patch')
@@ -227,7 +227,7 @@ def calculate_loc_correlation(points):
 
     percentile_time = np.percentile([point['days_to_merge'] for point in points], 95)
     percentile_loc = np.percentile([point['loc'] for point in points], 95)
-    points = [point for point in points if (point['days_to_merge'] < percentile_time and point['loc'] < percentile_loc)]
+    points = [point for point in points if point['days_to_merge'] < percentile_time and point['loc'] < percentile_loc]
 
     x = [point['loc'] for point in points]
     y = [point['days_to_merge'] for point in points]
@@ -241,7 +241,6 @@ def calculate_loc_correlation(points):
     plt.ylim(ymin=-5)
 
     set_fullscreen()
-
 
 
 def calculate_author_patches_time_to_merge(points):
