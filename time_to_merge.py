@@ -10,6 +10,7 @@ import sys
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas
+from pystackalytics import Stackalytics
 
 
 LOC_PERCENTILE = 75
@@ -100,6 +101,9 @@ def get_average_loc(lines_of_code):
 
 
 def get_points_from_data(data):
+    def get_patch_author(patch):
+        return patch['owner']['username']
+
     points = []
 
     start = datetime.date.fromtimestamp(data[0]['createdOn'])
@@ -220,16 +224,13 @@ def calculate_loc_correlation(points, title):
     plt.xlabel('Lines of code')
     plt.ylabel('Days to merge patch')
 
-    plt.scatter(x, y)
+    plt.scatter(x, y, s=70, alpha=0.75)
 
     plt.xlim(xmin=-5)
     plt.ylim(ymin=-5)
 
     set_fullscreen()
 
-
-def get_patch_author(patch):
-    return patch['owner']['username']
 
 
 def calculate_author_patches_time_to_merge(points, title):
@@ -250,8 +251,62 @@ def calculate_author_patches_time_to_merge(points, title):
         y.append(np.average(patches))  # The average of how long it took to merge the patches
 
     plt.xlabel('Patches by author')
-    plt.ylabel('Days to merge patch per author')
-    plt.scatter(x, y)
+    plt.ylabel('Average days to merge patch per author')
+    plt.scatter(x, y, s=70, alpha=0.75)
+
+    plt.xlim(-5, max(x) + 5)
+    plt.ylim(-5, max(y) + 5)
+
+    set_fullscreen()
+
+
+def calculate_author_reviews_time_to_merge(points, title):
+    _calculate_author_time_to_merge_by_metric(points, title, 'marks')
+
+
+def calculate_author_emails_time_to_merge(points, title):
+    _calculate_author_time_to_merge_by_metric(points, title, 'emails')
+
+
+def _calculate_author_time_to_merge_by_metric(points, title, metric):
+    get_current_figure()
+    plt.gcf().canvas.set_window_title(title)
+
+    percentile = np.percentile([point['days_to_merge'] for point in points], 95)
+    points = [point for point in points if point['days_to_merge'] < percentile]
+
+    authors = defaultdict(list)  # A map from author to how many days it took to merge each of his/her patches
+    for point in points:
+        authors[point['author']].append(point['days_to_merge'])
+
+    stackalytics = Stackalytics()
+    module = args.project.split('/')[-1]
+
+    if metric == 'emails':
+        module = None  # When retrieving via emails it looks like Stackalytics tries to find only emails with [module] in the title.
+    s_result = stackalytics.engineers(module=module, release='all', metric=metric)['stats']
+
+    if not s_result:
+        print 'No result found from Stackalytics API for module %s and metric %s' % (module, metric)
+        return
+
+    s_result_by_author = {}
+    for item in s_result:
+        s_result_by_author[item['id']] = item['metric']
+
+    x = []
+    y = []
+    for author, patches in authors.items():
+        try:
+            x.append(s_result_by_author[author])
+            y.append(np.average(patches))  # The average of how long it took to merge the patches
+        except KeyError:  # People don't always use the same Gerrit and Stackalytics/Launchpad user_ids
+            pass
+
+    plt.xlabel('%s by author' % metric)
+    plt.ylabel('Average days to merge patch per author')
+
+    plt.scatter(x, y, s=70, alpha=0.75)
 
     plt.xlim(-5, max(x) + 5)
     plt.ylim(-5, max(y) + 5)
@@ -276,5 +331,7 @@ owners = ' '.join(args.owner) + ' - ' if args.owner else ''
 title = (owners + args.project).replace('/', '_')
 calculate_time_to_merge_figure(points, 'Time to merge - ' + title)
 calculate_loc_correlation(points, 'Lines of code - ' + title)
-calculate_author_patches_time_to_merge(points, 'Time to merge per author - ' + title)
+calculate_author_patches_time_to_merge(points, 'Time to merge per author by commits - ' + title)
+calculate_author_reviews_time_to_merge(points, 'Time to merge per author by reviews - ' + title)
+calculate_author_emails_time_to_merge(points, 'Time to merge per author by reviews - ' + title)
 plt.show()
