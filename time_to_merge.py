@@ -102,7 +102,11 @@ def get_average_loc(lines_of_code):
 
 def get_points_from_data(data):
     def get_patch_author(patch):
-        return patch['owner']['username']
+        try:
+            return patch['owner']['username']
+        except KeyError:  # Not all patches on Gerrit have an owner username interestingly enough
+            return
+
 
     points = []
 
@@ -116,14 +120,16 @@ def get_points_from_data(data):
             get_submission_timestamp(patch))
         x_value = (creation - start).days
         y_value = (submitted - creation).days
+
         # Gerrit has a weird issue where some old patches have a bogus
         # createdOn value
-        if y_value > 0:
+        author = get_patch_author(patch)
+        if y_value > 0 and author is not None:
             points.append({
                 'date': x_value,
                 'days_to_merge': y_value,
                 'loc': get_loc(patch),
-                'author': get_patch_author(patch)})
+                'author': author})
 
     return points
 
