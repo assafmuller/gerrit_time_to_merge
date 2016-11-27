@@ -167,9 +167,14 @@ def set_fullscreen():
                 pass
 
 
-def calculate_time_to_merge_figure(points, title):
+def get_figure_title(prefix):
+    owners = ' '.join(args.owner) + ' - ' if args.owner else ''
+    return prefix + ' - ' + (owners + args.project).replace('/', '_')
+
+
+def calculate_time_to_merge_figure(points):
     get_current_figure()
-    plt.gcf().canvas.set_window_title(title)
+    plt.gcf().canvas.set_window_title(get_figure_title('Time to merge'))
 
     percentile = np.percentile([point['days_to_merge'] for point in points], 95)
     points = [point for point in points if point['days_to_merge'] < percentile]
@@ -216,9 +221,9 @@ def calculate_time_to_merge_figure(points, title):
     set_fullscreen()
 
 
-def calculate_loc_correlation(points, title):
+def calculate_loc_correlation(points):
     get_current_figure()
-    plt.gcf().canvas.set_window_title(title)
+    plt.gcf().canvas.set_window_title(get_figure_title('Lines of code'))
 
     percentile_time = np.percentile([point['days_to_merge'] for point in points], 95)
     percentile_loc = np.percentile([point['loc'] for point in points], 95)
@@ -239,9 +244,9 @@ def calculate_loc_correlation(points, title):
 
 
 
-def calculate_author_patches_time_to_merge(points, title):
+def calculate_author_patches_time_to_merge(points):
     get_current_figure()
-    plt.gcf().canvas.set_window_title(title)
+    plt.gcf().canvas.set_window_title(get_figure_title('Time to merge per author by commits'))
 
     percentile = np.percentile([point['days_to_merge'] for point in points], 95)
     points = [point for point in points if point['days_to_merge'] < percentile]
@@ -266,17 +271,17 @@ def calculate_author_patches_time_to_merge(points, title):
     set_fullscreen()
 
 
-def calculate_author_reviews_time_to_merge(points, title):
-    _calculate_author_time_to_merge_by_metric(points, title, 'marks')
+def calculate_author_reviews_time_to_merge(points):
+    _calculate_author_time_to_merge_by_metric(points, 'marks')
 
 
-def calculate_author_emails_time_to_merge(points, title):
-    _calculate_author_time_to_merge_by_metric(points, title, 'emails')
+def calculate_author_emails_time_to_merge(points):
+    _calculate_author_time_to_merge_by_metric(points, 'emails')
 
 
-def _calculate_author_time_to_merge_by_metric(points, title, metric):
+def _calculate_author_time_to_merge_by_metric(points, metric):
     get_current_figure()
-    plt.gcf().canvas.set_window_title(title)
+    plt.gcf().canvas.set_window_title(get_figure_title('Time to merge per author by %s') % metric)
 
     percentile = np.percentile([point['days_to_merge'] for point in points], 95)
     points = [point for point in points if point['days_to_merge'] < percentile]
@@ -333,11 +338,10 @@ if not points:
 plt.style.use('fivethirtyeight')
 
 CURRENT_FIGURE = 1
-owners = ' '.join(args.owner) + ' - ' if args.owner else ''
-title = (owners + args.project).replace('/', '_')
-calculate_time_to_merge_figure(points, 'Time to merge - ' + title)
-calculate_loc_correlation(points, 'Lines of code - ' + title)
-calculate_author_patches_time_to_merge(points, 'Time to merge per author by commits - ' + title)
-calculate_author_reviews_time_to_merge(points, 'Time to merge per author by reviews - ' + title)
-calculate_author_emails_time_to_merge(points, 'Time to merge per author by reviews - ' + title)
+
+calculate_time_to_merge_figure(points)
+calculate_loc_correlation(points)
+calculate_author_patches_time_to_merge(points)
+calculate_author_reviews_time_to_merge(points)
+calculate_author_emails_time_to_merge(points)
 plt.show()
