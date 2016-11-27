@@ -309,9 +309,9 @@ def _calculate_author_time_to_merge_by_metric(points, metric):
     for author, patches in authors.items():
         try:
             x.append(s_result_by_author[author])
-            y.append(np.average(patches))  # The average of how long it took to merge the patches
         except KeyError:  # People don't always use the same Gerrit and Stackalytics/Launchpad user_ids
-            pass
+            continue
+        y.append(np.average(patches))  # The average of how long it took to merge the patches
 
     plt.xlabel('%s by author' % metric)
     plt.ylabel('Average days to merge patch per author')
