@@ -25,9 +25,10 @@ def exec_cmd(command):
 
 
 parser = argparse.ArgumentParser(
-    description='Generate a graph depicting how long it took patches to get '
+    description='Generate graphs depicting how long it took patches to get '
                 'merged over time for a given project or a subset of its '
-                'contributors.')
+                'contributors as a function of time, lines of code, number '
+                'of reviews by the author and more.')
 parser.add_argument(
     'project',
     help='The OpenStack project to query. For example openstack/neutron.')
