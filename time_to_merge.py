@@ -306,9 +306,34 @@ def calculate_author_emails_time_to_merge(points):
     _calculate_author_time_to_merge_by_metric(points, 'emails')
 
 
+def calculate_author_filed_bugs_time_to_merge(points):
+    _calculate_author_time_to_merge_by_metric(points, 'filed-bugs')
+
+
+def calculate_author_resolved_bugs_time_to_merge(points):
+    _calculate_author_time_to_merge_by_metric(points, 'resolved-bugs')
+
+
+def calculate_author_drafted_blueprints_time_to_merge(points):
+    _calculate_author_time_to_merge_by_metric(points, 'bpd')
+
+
+def calculate_author_implemented_blueprints_time_to_merge(points):
+    _calculate_author_time_to_merge_by_metric(points, 'bpc')
+
+
+
 def _calculate_author_time_to_merge_by_metric(points, metric):
     get_current_figure()
-    plt.gcf().canvas.set_window_title(get_figure_title('Time to merge per author by %s') % metric)
+
+    METRIC_LABELS = {
+        'marks': 'Reviews',
+        'emails': 'Emails',
+        'bpd': 'Drafted Blueprints',
+        'bpc': 'Completed Blueprints',
+        'filed-bugs': 'Filed Bugs',
+        'resolved-bugs': 'Resolved Bugs'}
+    plt.gcf().canvas.set_window_title(get_figure_title('Time to merge per author by %s') % METRIC_LABELS[metric])
 
     points = filter_top_5_percent_days_to_merge(points)
     authors = get_days_to_merge_by_author(points)
@@ -337,7 +362,7 @@ def _calculate_author_time_to_merge_by_metric(points, metric):
             continue
         y.append(np.average(patches))  # The average of how long it took to merge the patches
 
-    plt.xlabel('%s by author' % metric)
+    plt.xlabel('%s by author' % METRIC_LABELS[metric])
     plt.ylabel('Average days to merge patch per author')
 
     plt.scatter(x, y, s=70, alpha=0.75)
@@ -367,5 +392,9 @@ calculate_loc_correlation(points)
 calculate_author_patches_time_to_merge(points)
 calculate_author_reviews_time_to_merge(points)
 calculate_author_emails_time_to_merge(points)
+calculate_author_filed_bugs_time_to_merge(points)
+calculate_author_resolved_bugs_time_to_merge(points)
+calculate_author_drafted_blueprints_time_to_merge(points)
+calculate_author_implemented_blueprints_time_to_merge(points)
 calculate_author_time_to_merge_histogram(points)
 plt.show()
