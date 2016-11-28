@@ -172,13 +172,16 @@ def get_figure_title(prefix):
     return prefix + ' - ' + (owners + args.project).replace('/', '_')
 
 
+def filter_top_5_percent_days_to_merge(points):
+    percentile = np.percentile([point['days_to_merge'] for point in points], 95)
+    return [point for point in points if point['days_to_merge'] < percentile]
+
+
 def calculate_time_to_merge_figure(points):
     get_current_figure()
     plt.gcf().canvas.set_window_title(get_figure_title('Time to merge'))
 
-    percentile = np.percentile([point['days_to_merge'] for point in points], 95)
-    points = [point for point in points if point['days_to_merge'] < percentile]
-
+    points = filter_top_5_percent_days_to_merge(points)
     x = [point['date'] for point in points]
     y = [point['days_to_merge'] for point in points]
 
@@ -243,16 +246,19 @@ def calculate_loc_correlation(points):
     set_fullscreen()
 
 
+def get_days_to_merge_by_author(points):
+    authors = defaultdict(list)  # A map from author to how many days it took to merge each of his/her patches
+    for point in points:
+        authors[point['author']].append(point['days_to_merge'])
+    return authors
+
+
 def calculate_author_patches_time_to_merge(points):
     get_current_figure()
     plt.gcf().canvas.set_window_title(get_figure_title('Time to merge per author by commits'))
 
-    percentile = np.percentile([point['days_to_merge'] for point in points], 95)
-    points = [point for point in points if point['days_to_merge'] < percentile]
-
-    authors = defaultdict(list)  # A map from author to how many days it took to merge each of his/her patches
-    for point in points:
-        authors[point['author']].append(point['days_to_merge'])
+    points = filter_top_5_percent_days_to_merge(points)
+    authors = get_days_to_merge_by_author(points)
 
     x = []
     y = []
@@ -270,6 +276,27 @@ def calculate_author_patches_time_to_merge(points):
     set_fullscreen()
 
 
+def calculate_author_time_to_merge_histogram(points):
+    get_current_figure()
+    plt.gcf().canvas.set_window_title(get_figure_title('Time to merge per author distribution'))
+
+    points = filter_top_5_percent_days_to_merge(points)
+    authors = get_days_to_merge_by_author(points)
+
+    x = []
+    for author, patches in authors.items():
+        if len(patches) >= 10:
+            x.append(np.average(patches))  # The average of how long it took to merge the patches
+
+    n, bins, patches = plt.hist(x, alpha=0.5)
+
+    plt.xticks(bins)
+    plt.xlabel('Days to merge patches')
+    plt.ylabel('Amount of authors with 10 or more patches')
+
+    set_fullscreen()
+
+
 def calculate_author_reviews_time_to_merge(points):
     _calculate_author_time_to_merge_by_metric(points, 'marks')
 
@@ -282,12 +309,8 @@ def _calculate_author_time_to_merge_by_metric(points, metric):
     get_current_figure()
     plt.gcf().canvas.set_window_title(get_figure_title('Time to merge per author by %s') % metric)
 
-    percentile = np.percentile([point['days_to_merge'] for point in points], 95)
-    points = [point for point in points if point['days_to_merge'] < percentile]
-
-    authors = defaultdict(list)  # A map from author to how many days it took to merge each of his/her patches
-    for point in points:
-        authors[point['author']].append(point['days_to_merge'])
+    points = filter_top_5_percent_days_to_merge(points)
+    authors = get_days_to_merge_by_author(points)
 
     stackalytics = Stackalytics()
     module = args.project.split('/')[-1]
@@ -343,4 +366,5 @@ calculate_loc_correlation(points)
 calculate_author_patches_time_to_merge(points)
 calculate_author_reviews_time_to_merge(points)
 calculate_author_emails_time_to_merge(points)
+calculate_author_time_to_merge_histogram(points)
 plt.show()
