@@ -362,6 +362,10 @@ def _calculate_author_time_to_merge_by_metric(points, metric):
             continue
         y.append(np.average(patches))  # The average of how long it took to merge the patches
 
+    if not x:
+        print('Could not find results for %s by %s' % (authors.keys(), metric))
+        return
+
     plt.xlabel('%s by author' % METRIC_LABELS[metric])
     plt.ylabel('Average days to merge patch per author')
 
