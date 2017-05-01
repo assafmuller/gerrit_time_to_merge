@@ -36,6 +36,10 @@ parser = argparse.ArgumentParser(
                 'will use the local results. As the cache has no timeout, its '
                 'contents must be deleted manually to get a fresh query.')
 parser.add_argument(
+    '--verbose',
+    action='store_true',
+    help='Display author names, core status.')
+parser.add_argument(
     'project',
     help='The OpenStack project to query. For example openstack/neutron.')
 parser.add_argument(
@@ -350,6 +354,13 @@ def calculate_author_implemented_blueprints_time_to_merge(points):
     _calculate_author_time_to_merge_by_metric(points, 'bpc')
 
 
+def _is_core(author):
+    return author['core'] == 'master'
+
+
+def _get_color_by_core(is_core):
+    return (0, 1 if is_core else 0, 0 if is_core else 1) if args.verbose else (0, 0, 1)
+
 
 def _calculate_author_time_to_merge_by_metric(points, metric):
     get_current_figure()
@@ -379,15 +390,22 @@ def _calculate_author_time_to_merge_by_metric(points, metric):
 
     s_result_by_author = {}
     for item in s_result:
-        s_result_by_author[item['id']] = item['metric']
+        s_result_by_author[item['id']] = {
+            'metric': item['metric'],
+            'core': item['core']}
 
+    colors = []
+    labels = []
     x = []
     y = []
-    for author, patches in authors.items():
+    for author, patches in sorted(authors.items()):
         try:
-            x.append(s_result_by_author[author])
+            x.append(s_result_by_author[author]['metric'])
         except KeyError:  # People don't always use the same Gerrit and Stackalytics/Launchpad user_ids
             continue
+
+        labels.append(author)
+        colors.append(_get_color_by_core(_is_core(s_result_by_author[author])))
         y.append(np.average(patches))  # The average of how long it took to merge the patches
 
     if not x:
@@ -397,7 +415,11 @@ def _calculate_author_time_to_merge_by_metric(points, metric):
     plt.xlabel('%s by author' % METRIC_LABELS[metric])
     plt.ylabel('Average days to merge patch per author')
 
-    plt.scatter(x, y, s=70, alpha=0.75)
+    plt.scatter(x, y, s=70, alpha=0.75, c=colors)
+
+    if args.verbose:
+        for i in range(0, len(labels)):
+            plt.annotate(labels[i], (x[i], y[i]))
 
     plt.xlim(-5, max(x) + 5)
     plt.ylim(-5, max(y) + 5)
