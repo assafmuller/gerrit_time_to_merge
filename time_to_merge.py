@@ -4,6 +4,7 @@ import argparse
 from collections import defaultdict
 import datetime
 import json
+import os
 import subprocess
 import sys
 
@@ -28,7 +29,12 @@ parser = argparse.ArgumentParser(
     description='Generate graphs depicting how long it took patches to get '
                 'merged over time for a given project or a subset of its '
                 'contributors as a function of time, lines of code, number '
-                'of reviews by the author and more.')
+                'of reviews by the author and more. Note that the app uses '
+                'a caching system - Query results are stored in the cache dir '
+                'with no timeout. Subsequent runs of the app against the same '
+                'project and set of contributors will not query Gerrit, but '
+                'will use the local results. As the cache has no timeout, its '
+                'contents must be deleted manually to get a fresh query.')
 parser.add_argument(
     'project',
     help='The OpenStack project to query. For example openstack/neutron.')
@@ -37,6 +43,28 @@ parser.add_argument(
     nargs='*',
     help='A list of zero or more Gerrit usernames. For example foo bar.')
 args = parser.parse_args()
+
+
+def _get_file_from_query(query):
+    return query.replace('/', '_')
+
+
+def get_json_data_from_cache(query):
+    try:
+        os.mkdir('cache')
+    except OSError:
+        pass
+
+    query = _get_file_from_query(query)
+    if query in os.listdir('cache'):
+        with open('cache/%s' % query) as query_file:
+            return json.load(query_file)
+
+
+def put_json_data_in_cache(query, data):
+    query = _get_file_from_query(query)
+    with open('cache/%s' % query, 'w') as query_file:
+        json.dump(data, query_file)
 
 
 def get_json_data_from_query(query):
@@ -380,7 +408,12 @@ def _calculate_author_time_to_merge_by_metric(points, metric):
 query = "status:merged branch:master project:%s " % args.project
 if args.owner:
     query += get_list_of_owners(args.owner)
-data = get_json_data_from_query(query)
+
+data = get_json_data_from_cache(query)
+if not data:
+    data = get_json_data_from_query(query)
+    put_json_data_in_cache(query, data)
+
 points = get_points_from_data(data)
 
 if not points:
