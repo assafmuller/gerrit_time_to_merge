@@ -7,6 +7,7 @@ import json
 import os
 import subprocess
 import sys
+import time
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -35,6 +36,9 @@ parser = argparse.ArgumentParser(
                 'project and set of contributors will not query Gerrit, but '
                 'will use the local results. As the cache has no timeout, its '
                 'contents must be deleted manually to get a fresh query.')
+parser.add_argument(
+    '--newer-than',
+    help='Only look at patches merged in the last so and so days.')
 parser.add_argument(
     '--verbose',
     action='store_true',
@@ -77,7 +81,7 @@ def get_json_data_from_query(query):
 
     while True:
         gerrit_cmd = (
-            'ssh -p 29418 review.openstack.org gerrit query --current-patch-set --start %(start)s %(query)s --format=json' %
+            'ssh -p 29418 review.openstack.org gerrit query --format=json --current-patch-set --start %(start)s %(query)s' %
             {'start': start,
              'query': query})
         result, error = exec_cmd(gerrit_cmd)
@@ -381,7 +385,8 @@ def _calculate_author_time_to_merge_by_metric(points, metric):
 
     if metric == 'emails':
         module = None  # When retrieving via emails it looks like Stackalytics tries to find only emails with [module] in the title.
-    s_result = stackalytics.engineers(module=module, release='all', metric=metric)['stats']
+    start_date = int(time.time() - int(args.newer_than) * 86400)  # Now - newer_than days
+    s_result = stackalytics.engineers(module=module, release='all', metric=metric, start_date=start_date)['stats']
 
     if not s_result:
         print 'No result found from Stackalytics API for module %s and metric %s' % (module, metric)
@@ -420,8 +425,8 @@ def _calculate_author_time_to_merge_by_metric(points, metric):
         for i in range(0, len(labels)):
             plt.annotate(labels[i], (x[i], y[i]))
 
-    plt.xlim(-5, max(x) + 5)
-    plt.ylim(-5, max(y) + 5)
+    plt.xlim(0, max(x) + 5)
+    plt.ylim(0, max(y) + 5)
 
     set_fullscreen()
 
@@ -429,6 +434,8 @@ def _calculate_author_time_to_merge_by_metric(points, metric):
 query = "status:merged branch:master project:%s " % args.project
 if args.owner:
     query += get_list_of_owners(args.owner)
+if args.newer_than:
+    query += ' -- -age:%dd' % int(args.newer_than)
 
 print(query)
 data = get_json_data_from_cache(query)
