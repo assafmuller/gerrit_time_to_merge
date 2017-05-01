@@ -298,13 +298,19 @@ def calculate_author_patches_time_to_merge(points):
 
     x = []
     y = []
+    labels = []
     for author, patches in authors.items():
         x.append(len(patches))  # How many patches
         y.append(np.average(patches))  # The average of how long it took to merge the patches
+        labels.append(author)
 
     plt.xlabel('Patches by author')
     plt.ylabel('Average days to merge patch per author')
     plt.scatter(x, y, s=70, alpha=0.75)
+
+    if args.verbose:
+        for i in range(0, len(labels)):
+            plt.annotate(labels[i], (x[i], y[i]))
 
     plt.xlim(-5, max(x) + 5)
     plt.ylim(-5, max(y) + 5)
