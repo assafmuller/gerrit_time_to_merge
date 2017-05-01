@@ -72,7 +72,6 @@ def put_json_data_in_cache(query, data):
 
 
 def get_json_data_from_query(query):
-    print(query)
     data = []
     start = 0
 
@@ -431,6 +430,7 @@ query = "status:merged branch:master project:%s " % args.project
 if args.owner:
     query += get_list_of_owners(args.owner)
 
+print(query)
 data = get_json_data_from_cache(query)
 if not data:
     data = get_json_data_from_query(query)
