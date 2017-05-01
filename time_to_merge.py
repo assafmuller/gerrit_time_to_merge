@@ -385,8 +385,14 @@ def _calculate_author_time_to_merge_by_metric(points, metric):
 
     if metric == 'emails':
         module = None  # When retrieving via emails it looks like Stackalytics tries to find only emails with [module] in the title.
-    start_date = int(time.time() - int(args.newer_than) * 86400)  # Now - newer_than days
-    s_result = stackalytics.engineers(module=module, release='all', metric=metric, start_date=start_date)['stats']
+
+    stackalytics_args = {
+        'module': module,
+        'release': 'all',
+        'metric': metric}
+    if args.newer_than:
+        stackalytics_args['start_date'] = int(time.time() - int(args.newer_than) * 86400)  # Now - newer_than days
+    s_result = stackalytics.engineers(**stackalytics_args)['stats']
 
     if not s_result:
         print 'No result found from Stackalytics API for module %s and metric %s' % (module, metric)
@@ -453,7 +459,11 @@ plt.style.use('fivethirtyeight')
 
 CURRENT_FIGURE = 1
 
-calculate_time_to_merge_figure(points)
+if args.newer_than:
+    print('Looking at patches and Stackalytics metrics newer than %s days, not showing the moving mean graph' % args.newer_than)
+else:
+    calculate_time_to_merge_figure(points)
+
 calculate_loc_correlation(points)
 calculate_author_patches_time_to_merge(points)
 calculate_author_reviews_time_to_merge(points)
