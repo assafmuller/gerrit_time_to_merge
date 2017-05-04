@@ -180,6 +180,48 @@ def get_points_from_data(data):
     return points
 
 
+def get_cores_from_data(data):
+    # Dict from username of core to dict of min and max dates / actions as core
+    cores = defaultdict(dict)
+    start_date = int(time.time())
+    end_date = 0
+
+    for patch in data:
+        if patch['createdOn'] < start_date:
+            start_date = patch['createdOn']
+        if patch['createdOn'] > end_date:
+            end_date = patch['createdOn']
+
+        try:
+            # Not all patches have approvals data
+            approvals = patch['currentPatchSet']['approvals']
+        except KeyError:
+            continue
+
+        for approval in approvals:
+            if(approval['type'] == 'Workflow' or
+               (approval['type'] == 'Code-Review' and
+               approval['value'] in ('-2', '2'))):
+                date = approval['grantedOn']
+                username = approval['by']['username']
+                if not cores[username].get('min') or date < cores[username].get('min'):
+                    cores[username]['min'] = date
+                if not cores[username].get('max') or date > cores[username].get('max'):
+                    cores[username]['max'] = date
+
+    counts = []
+    # {start|end}_date are in seconds since the epoch.
+    # Iterate from start to end dates in jumps of days.
+    for timestamp in range(start_date, end_date, 86400):
+        count = 0
+        for core, dates in cores.items():
+            if dates['min'] <= timestamp <= dates['max']:
+                count += 1
+        counts.append(count)
+
+    return counts
+
+
 def get_list_of_owners(people):
     people_query = '\('
     for person in people:
@@ -280,7 +322,7 @@ def calculate_time_to_merge_vs_number_of_patches(points):
 
     ax.set_xlabel('%s patches' % len(data))
     ax.set_ylabel('Days to merge patch')
-    ax.grid(axis='y')
+    ax.grid(b=False, axis='y')
 
     window = min(len(x) / 10, 60)
     averages = moving_average(y, window)
@@ -300,7 +342,8 @@ def calculate_time_to_merge_vs_number_of_patches(points):
 
     # Plot a moving average of the number of patches per day
     ax2 = ax.twinx()
-    ax2.set_ylabel('Number of patches a day')
+    ax2.grid(b=False)
+    ax2.set_ylabel('Number of patches a day', color='r')
     y_n_patches = defaultdict(int)
     for point in points:
         y_n_patches[point['date']] += 1
@@ -311,12 +354,26 @@ def calculate_time_to_merge_vs_number_of_patches(points):
     patch_averages = moving_average(yy, patches_window)
     l2 = ax2.plot(list(set(x)), patch_averages, color='r')
 
+    ax3 = ax.twinx()
+    ax3.grid(b=False)
+    ax3.set_ylabel('Number of cores', color='g')
+    core_counts = get_cores_from_data(data)
+    l3 = ax3.plot(range(0, x[-1]), core_counts[0:x[-1]], color='g')
+
     ax.legend(
-        l1 + l2,
+        l1 + l2 + l3,
         ('Moving mean of the time to merge of the last %s patches' % window,
          'Moving mean of the number of patches a day, with a window of '
-         '%s days' % patches_window))
+         '%s days' % patches_window,
+         'Number of cores'))
     fig.subplots_adjust(bottom=0.15)
+
+    # Since we have two Y labels on the right, give them enough room
+    fig.subplots_adjust(right=0.9)
+
+    # Space out the Y labels of the second and third axes so they don't overlap
+    ax2.spines['right'].set_position(('axes', 1.0))
+    ax3.spines['right'].set_position(('axes', 1.05))
     set_fullscreen(fig)
 
 
