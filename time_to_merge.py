@@ -269,6 +269,57 @@ def calculate_time_to_merge_figure(points):
     set_fullscreen(fig)
 
 
+def calculate_time_to_merge_vs_number_of_patches(points):
+    fig, ax = plt.subplots()
+    fig.canvas.set_window_title(
+        get_figure_title('Time to merge vs. number of patches'))
+
+    points = filter_top_5_percent_days_to_merge(points)
+    x = [point['date'] for point in points]
+    y = [point['days_to_merge'] for point in points]
+
+    ax.set_xlabel('%s patches' % len(data))
+    ax.set_ylabel('Days to merge patch')
+    ax.grid(axis='y')
+
+    window = min(len(x) / 10, 60)
+    averages = moving_average(y, window)
+
+    l1 = ax.plot(x, averages)
+
+    x_axis = range(0, x[-1], max(1, x[-1] / 10))  # 0 to last point, 10 hops
+
+    # Generate a date from each hop relative to the date the first patch was
+    # contributed
+    start = datetime.date.fromtimestamp(data[0]['createdOn'])
+    x_axis_dates = [
+        str(start + datetime.timedelta(days=day_delta))
+        for day_delta in x_axis]
+    ax.set_xticks(x_axis)
+    ax.set_xticklabels(x_axis_dates, rotation=45)
+
+    # Plot a moving average of the number of patches per day
+    ax2 = ax.twinx()
+    ax2.set_ylabel('Number of patches a day')
+    y_n_patches = defaultdict(int)
+    for point in points:
+        y_n_patches[point['date']] += 1
+    yy = []
+    for date, count in sorted(y_n_patches.items()):
+        yy.append(y_n_patches[date])
+    patches_window = 30
+    patch_averages = moving_average(yy, patches_window)
+    l2 = ax2.plot(list(set(x)), patch_averages, color='r')
+
+    ax.legend(
+        l1 + l2,
+        ('Moving mean of the time to merge of the last %s patches' % window,
+         'Moving mean of the number of patches a day, with a window of '
+         '%s days' % patches_window))
+    fig.subplots_adjust(bottom=0.15)
+    set_fullscreen(fig)
+
+
 def calculate_loc_correlation(points):
     fig, ax = plt.subplots()
     fig.canvas.set_window_title(get_figure_title('Lines of code'))
@@ -501,6 +552,7 @@ if args.newer_than:
 else:
     calculate_time_to_merge_figure(points)
 
+calculate_time_to_merge_vs_number_of_patches(points)
 calculate_loc_correlation(points)
 calculate_author_patches_time_to_merge(points)
 calculate_author_reviews_time_to_merge(points)
@@ -510,5 +562,4 @@ calculate_author_resolved_bugs_time_to_merge(points)
 calculate_author_drafted_blueprints_time_to_merge(points)
 calculate_author_implemented_blueprints_time_to_merge(points)
 calculate_author_time_to_merge_histogram(points)
-
 plt.show()
