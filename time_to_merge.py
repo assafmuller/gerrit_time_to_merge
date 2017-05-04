@@ -181,16 +181,10 @@ def moving_average(data, window):
     return pandas.Series(data).rolling(window=window).mean()
 
 
-def get_current_figure():
-    global CURRENT_FIGURE
-    plt.figure(CURRENT_FIGURE)
-    CURRENT_FIGURE += 1
-
-
-def set_fullscreen():
+def set_fullscreen(fig):
     # http://stackoverflow.com/questions/12439588/how-to-maximize-a-plt-show-window-using-python
 
-    mng = plt.get_current_fig_manager()
+    mng = fig.canvas.manager
     try:
         mng.frame.Maximize(True)
     except AttributeError:
@@ -214,8 +208,8 @@ def filter_top_5_percent_days_to_merge(points):
 
 
 def calculate_time_to_merge_figure(points):
-    get_current_figure()
-    plt.gcf().canvas.set_window_title(get_figure_title('Time to merge'))
+    fig, ax = plt.subplots()
+    fig.canvas.set_window_title(get_figure_title('Time to merge'))
 
     points = filter_top_5_percent_days_to_merge(points)
     x = [point['date'] for point in points]
@@ -224,15 +218,15 @@ def calculate_time_to_merge_figure(points):
     print('Average days to merge patches: %s, median: %s' % (
           (int(round(np.average(y))), int(round(np.median(y))))))
 
-    plt.xlabel('%s patches' % len(data))
-    plt.ylabel('Days to merge patch')
-    plt.grid(axis='y')
+    ax.set_xlabel('%s patches' % len(data))
+    ax.set_ylabel('Days to merge patch')
+    ax.grid(axis='y')
 
     window = min(len(x) / 10, 60)
     averages = moving_average(y, window)
 
     # Plot the patches
-    plt.plot(x, averages)
+    ax.plot(x, averages)
 
     average_loc = get_average_loc([get_loc(patch) for patch in data])
     colors = [get_color(point['loc'], average_loc) for point in points]
@@ -241,7 +235,7 @@ def calculate_time_to_merge_figure(points):
         return 0.21 * r + 0.72 * g + 0.07 * b
 
     size = [(1.0 - (to_grey(r, g, b))) * 70 for (r, g, b) in colors]
-    plt.scatter(x, y, s=size, c=colors, alpha=0.75)
+    ax.scatter(x, y, s=size, c=colors, alpha=0.75)
 
     x_axis = range(0, x[-1], max(1, x[-1] / 10))  # 0 to last point, 10 hops
 
@@ -250,19 +244,20 @@ def calculate_time_to_merge_figure(points):
     start = datetime.date.fromtimestamp(data[0]['createdOn'])
     x_axis_dates = [
         str(start + datetime.timedelta(days=day_delta)) for day_delta in x_axis]
-    plt.xticks(x_axis, x_axis_dates, rotation=45)
+    ax.set_xticks(x_axis)
+    ax.set_xticklabels(x_axis_dates, rotation=45)
 
-    plt.xlim(xmin=-5)
-    plt.ylim(ymin=-5)
-    plt.legend(['Moving mean of the last %s patches' % window, 'Lines of code, small & green to large & red'])
-    plt.gcf().subplots_adjust(bottom=0.15)
+    ax.set_xlim(xmin=-5)
+    ax.set_ylim(ymin=-5)
+    ax.legend(['Moving mean of the last %s patches' % window, 'Lines of code, small & green to large & red'])
+    fig.subplots_adjust(bottom=0.15)
 
-    set_fullscreen()
+    set_fullscreen(fig)
 
 
 def calculate_loc_correlation(points):
-    get_current_figure()
-    plt.gcf().canvas.set_window_title(get_figure_title('Lines of code'))
+    fig, ax = plt.subplots()
+    fig.canvas.set_window_title(get_figure_title('Lines of code'))
 
     percentile_time = np.percentile([point['days_to_merge'] for point in points], 95)
     percentile_loc = np.percentile([point['loc'] for point in points], 95)
@@ -271,15 +266,15 @@ def calculate_loc_correlation(points):
     x = [point['loc'] for point in points]
     y = [point['days_to_merge'] for point in points]
 
-    plt.xlabel('Lines of code')
-    plt.ylabel('Days to merge patch')
+    ax.set_xlabel('Lines of code')
+    ax.set_ylabel('Days to merge patch')
 
-    plt.scatter(x, y, s=70, alpha=0.75)
+    ax.scatter(x, y, s=70, alpha=0.75)
 
-    plt.xlim(xmin=-5)
-    plt.ylim(ymin=-5)
+    ax.set_xlim(xmin=-5)
+    ax.set_ylim(ymin=-5)
 
-    set_fullscreen()
+    set_fullscreen(fig)
 
 
 def get_days_to_merge_by_author(points):
@@ -290,8 +285,8 @@ def get_days_to_merge_by_author(points):
 
 
 def calculate_author_patches_time_to_merge(points):
-    get_current_figure()
-    plt.gcf().canvas.set_window_title(get_figure_title('Time to merge per author by commits'))
+    fig, ax = plt.subplots()
+    fig.canvas.set_window_title(get_figure_title('Time to merge per author by commits'))
 
     points = filter_top_5_percent_days_to_merge(points)
     authors = get_days_to_merge_by_author(points)
@@ -304,23 +299,23 @@ def calculate_author_patches_time_to_merge(points):
         y.append(np.average(patches))  # The average of how long it took to merge the patches
         labels.append(author)
 
-    plt.xlabel('Patches by author')
-    plt.ylabel('Average days to merge patch per author')
-    plt.scatter(x, y, s=70, alpha=0.75)
+    ax.set_xlabel('Patches by author')
+    ax.set_ylabel('Average days to merge patch per author')
+    ax.scatter(x, y, s=70, alpha=0.75)
 
     if args.verbose:
         for i in range(0, len(labels)):
             plt.annotate(labels[i], (x[i], y[i]))
 
-    plt.xlim(-5, max(x) + 5)
-    plt.ylim(-5, max(y) + 5)
+    ax.set_xlim(-5, max(x) + 5)
+    ax.set_ylim(-5, max(y) + 5)
 
-    set_fullscreen()
+    set_fullscreen(fig)
 
 
 def calculate_author_time_to_merge_histogram(points):
-    get_current_figure()
-    plt.gcf().canvas.set_window_title(get_figure_title('Time to merge per author distribution'))
+    fig, ax = plt.subplots()
+    fig.canvas.set_window_title(get_figure_title('Time to merge per author distribution'))
 
     points = filter_top_5_percent_days_to_merge(points)
     authors = get_days_to_merge_by_author(points)
@@ -330,13 +325,13 @@ def calculate_author_time_to_merge_histogram(points):
         if len(patches) >= 10:
             x.append(np.average(patches))  # The average of how long it took to merge the patches
 
-    n, bins, patches = plt.hist(x, alpha=0.5)
+    n, bins, patches = ax.hist(x, alpha=0.5)
 
-    plt.xticks(bins)
-    plt.xlabel('Days to merge patches')
-    plt.ylabel('Amount of authors with 10 or more patches')
+    ax.set_xticks(bins)
+    ax.set_xlabel('Days to merge patches')
+    ax.set_ylabel('Amount of authors with 10 or more patches')
 
-    set_fullscreen()
+    set_fullscreen(fig)
 
 
 def calculate_author_reviews_time_to_merge(points):
@@ -372,8 +367,6 @@ def _get_color_by_core(is_core):
 
 
 def _calculate_author_time_to_merge_by_metric(points, metric):
-    get_current_figure()
-
     METRIC_LABELS = {
         'marks': 'Reviews',
         'emails': 'Emails',
@@ -381,7 +374,9 @@ def _calculate_author_time_to_merge_by_metric(points, metric):
         'bpc': 'Completed Blueprints',
         'filed-bugs': 'Filed Bugs',
         'resolved-bugs': 'Resolved Bugs'}
-    plt.gcf().canvas.set_window_title(get_figure_title('Time to merge per author by %s') % METRIC_LABELS[metric])
+
+    fig, ax = plt.subplots()
+    fig.canvas.set_window_title(get_figure_title('Time to merge per author by %s') % METRIC_LABELS[metric])
 
     points = filter_top_5_percent_days_to_merge(points)
     authors = get_days_to_merge_by_author(points)
@@ -428,19 +423,19 @@ def _calculate_author_time_to_merge_by_metric(points, metric):
         print('Could not find results for %s by %s' % (authors.keys(), metric))
         return
 
-    plt.xlabel('%s by author' % METRIC_LABELS[metric])
-    plt.ylabel('Average days to merge patch per author')
+    ax.set_xlabel('%s by author' % METRIC_LABELS[metric])
+    ax.set_ylabel('Average days to merge patch per author')
 
-    plt.scatter(x, y, s=70, alpha=0.75, c=colors)
+    ax.scatter(x, y, s=70, alpha=0.75, c=colors)
 
     if args.verbose:
         for i in range(0, len(labels)):
-            plt.annotate(labels[i], (x[i], y[i]))
+            ax.annotate(labels[i], (x[i], y[i]))
 
-    plt.xlim(0, max(x) + 5)
-    plt.ylim(0, max(y) + 5)
+    ax.set_xlim(0, max(x) + 5)
+    ax.set_ylim(0, max(y) + 5)
 
-    set_fullscreen()
+    set_fullscreen(fig)
 
 
 query = "status:merged branch:master project:%s " % args.project
@@ -463,8 +458,6 @@ if not points:
 
 plt.style.use('fivethirtyeight')
 
-CURRENT_FIGURE = 1
-
 if args.newer_than:
     print('Looking at patches and Stackalytics metrics newer than %s days, not showing the moving mean graph' % args.newer_than)
 else:
@@ -479,4 +472,5 @@ calculate_author_resolved_bugs_time_to_merge(points)
 calculate_author_drafted_blueprints_time_to_merge(points)
 calculate_author_implemented_blueprints_time_to_merge(points)
 calculate_author_time_to_merge_histogram(points)
+
 plt.show()
