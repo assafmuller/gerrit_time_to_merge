@@ -81,7 +81,8 @@ def get_json_data_from_query(query):
 
     while True:
         gerrit_cmd = (
-            'ssh -p 29418 review.openstack.org gerrit query --format=json --current-patch-set --start %(start)s %(query)s' %
+            'ssh -p 29418 review.openstack.org gerrit query --format=json '
+            '--current-patch-set --start %(start)s %(query)s' %
             {'start': start,
              'query': query})
         result, error = exec_cmd(gerrit_cmd)
@@ -97,7 +98,8 @@ def get_json_data_from_query(query):
             print('No patches found!')
             sys.exit(1)
 
-        print('Found metadata for %s more patches, %s total so far' % (len(lines), len(data)))
+        print('Found metadata for %s more patches, %s total so far' %
+              (len(lines), len(data)))
         start += len(lines)
         more_changes = json.loads(result.split('\n')[-2])['moreChanges']
         if not more_changes:
@@ -109,27 +111,34 @@ def get_json_data_from_query(query):
 
 def get_submission_timestamp(patch):
     try:
-        approvals = patch['currentPatchSet']['approvals']  # Not all patches have approvals data
+        # Not all patches have approvals data
+        approvals = patch['currentPatchSet']['approvals']
     except KeyError:
         return patch['lastUpdated']
 
-    # Weirdly enough some patches don't have submission data. Take lastUpdated instead.
+    # Weirdly enough some patches don't have submission data.
+    # Take lastUpdated instead.
     return next(
-        (approval['grantedOn'] for approval in approvals if approval['type'] == 'SUBM'), patch['lastUpdated'])
+        (approval['grantedOn'] for approval in approvals if
+         approval['type'] == 'SUBM'), patch['lastUpdated'])
 
 
 def get_loc(patch):
-    return max(0, patch['currentPatchSet']['sizeInsertions'] + patch['currentPatchSet']['sizeDeletions'])
+    return max(0, patch['currentPatchSet']['sizeInsertions'] +
+               patch['currentPatchSet']['sizeDeletions'])
 
 
 def get_color(loc, max_loc):
     """Calculate a color between green and red.
+
     :param loc: How many lines of code?
     :param max_loc: The value of lines of code over which we return full red
     :return: (r, g, b) tuple
     """
 
-    loc = min(loc, max_loc)  # Patches may have more LOC than the max we calculated, for example 75th percentile.
+    # Patches may have more LOC than the max we calculated,
+    # for example 75th percentile.
+    loc = min(loc, max_loc)
     return (loc / max_loc, 1.0 - (loc / max_loc), 0)
 
 
@@ -141,7 +150,8 @@ def get_points_from_data(data):
     def get_patch_author(patch):
         try:
             return patch['owner']['username']
-        except KeyError:  # Not all patches on Gerrit have an owner username interestingly enough
+        # Not all patches on Gerrit have an owner username interestingly enough
+        except KeyError:
             return
 
     points = []
@@ -182,7 +192,8 @@ def moving_average(data, window):
 
 
 def set_fullscreen(fig):
-    # http://stackoverflow.com/questions/12439588/how-to-maximize-a-plt-show-window-using-python
+    # http://stackoverflow.com/questions/12439588/
+    # how-to-maximize-a-plt-show-window-using-python
 
     mng = fig.canvas.manager
     try:
@@ -203,7 +214,8 @@ def get_figure_title(prefix):
 
 
 def filter_top_5_percent_days_to_merge(points):
-    percentile = np.percentile([point['days_to_merge'] for point in points], 95)
+    percentile = np.percentile(
+        [point['days_to_merge'] for point in points], 95)
     return [point for point in points if point['days_to_merge'] < percentile]
 
 
@@ -243,13 +255,15 @@ def calculate_time_to_merge_figure(points):
     # contributed
     start = datetime.date.fromtimestamp(data[0]['createdOn'])
     x_axis_dates = [
-        str(start + datetime.timedelta(days=day_delta)) for day_delta in x_axis]
+        str(start + datetime.timedelta(days=day_delta))
+        for day_delta in x_axis]
     ax.set_xticks(x_axis)
     ax.set_xticklabels(x_axis_dates, rotation=45)
 
     ax.set_xlim(xmin=-5)
     ax.set_ylim(ymin=-5)
-    ax.legend(['Moving mean of the last %s patches' % window, 'Lines of code, small & green to large & red'])
+    ax.legend(['Moving mean of the last %s patches' % window,
+               'Lines of code, small & green to large & red'])
     fig.subplots_adjust(bottom=0.15)
 
     set_fullscreen(fig)
@@ -259,9 +273,12 @@ def calculate_loc_correlation(points):
     fig, ax = plt.subplots()
     fig.canvas.set_window_title(get_figure_title('Lines of code'))
 
-    percentile_time = np.percentile([point['days_to_merge'] for point in points], 95)
+    percentile_time = np.percentile(
+        [point['days_to_merge'] for point in points], 95)
     percentile_loc = np.percentile([point['loc'] for point in points], 95)
-    points = [point for point in points if point['days_to_merge'] < percentile_time and point['loc'] < percentile_loc]
+    points = [point for point in points if
+              point['days_to_merge'] < percentile_time and
+              point['loc'] < percentile_loc]
 
     x = [point['loc'] for point in points]
     y = [point['days_to_merge'] for point in points]
@@ -278,7 +295,8 @@ def calculate_loc_correlation(points):
 
 
 def get_days_to_merge_by_author(points):
-    authors = defaultdict(list)  # A map from author to how many days it took to merge each of his/her patches
+    # A map from author to how many days it took to merge each of their patches
+    authors = defaultdict(list)
     for point in points:
         authors[point['author']].append(point['days_to_merge'])
     return authors
@@ -286,7 +304,8 @@ def get_days_to_merge_by_author(points):
 
 def calculate_author_patches_time_to_merge(points):
     fig, ax = plt.subplots()
-    fig.canvas.set_window_title(get_figure_title('Time to merge per author by commits'))
+    fig.canvas.set_window_title(
+        get_figure_title('Time to merge per author by commits'))
 
     points = filter_top_5_percent_days_to_merge(points)
     authors = get_days_to_merge_by_author(points)
@@ -296,7 +315,8 @@ def calculate_author_patches_time_to_merge(points):
     labels = []
     for author, patches in authors.items():
         x.append(len(patches))  # How many patches
-        y.append(np.average(patches))  # The average of how long it took to merge the patches
+        # The average of how long it took to merge the patches
+        y.append(np.average(patches))
         labels.append(author)
 
     ax.set_xlabel('Patches by author')
@@ -315,7 +335,8 @@ def calculate_author_patches_time_to_merge(points):
 
 def calculate_author_time_to_merge_histogram(points):
     fig, ax = plt.subplots()
-    fig.canvas.set_window_title(get_figure_title('Time to merge per author distribution'))
+    fig.canvas.set_window_title(
+        get_figure_title('Time to merge per author distribution'))
 
     points = filter_top_5_percent_days_to_merge(points)
     authors = get_days_to_merge_by_author(points)
@@ -323,7 +344,8 @@ def calculate_author_time_to_merge_histogram(points):
     x = []
     for author, patches in authors.items():
         if len(patches) >= 10:
-            x.append(np.average(patches))  # The average of how long it took to merge the patches
+            # The average of how long it took to merge the patches
+            x.append(np.average(patches))
 
     n, bins, patches = ax.hist(x, alpha=0.5)
 
@@ -363,7 +385,9 @@ def _is_core(author):
 
 
 def _get_color_by_core(is_core):
-    return (0, 1 if is_core else 0, 0 if is_core else 1) if args.verbose else (0, 0, 1)
+    return (
+        0, 1 if is_core else 0, 0 if is_core else 1) if \
+        args.verbose else (0, 0, 1)
 
 
 def _calculate_author_time_to_merge_by_metric(points, metric):
@@ -376,7 +400,9 @@ def _calculate_author_time_to_merge_by_metric(points, metric):
         'resolved-bugs': 'Resolved Bugs'}
 
     fig, ax = plt.subplots()
-    fig.canvas.set_window_title(get_figure_title('Time to merge per author by %s') % METRIC_LABELS[metric])
+    fig.canvas.set_window_title(
+        get_figure_title(
+            'Time to merge per author by %s') % METRIC_LABELS[metric])
 
     points = filter_top_5_percent_days_to_merge(points)
     authors = get_days_to_merge_by_author(points)
@@ -385,18 +411,24 @@ def _calculate_author_time_to_merge_by_metric(points, metric):
     module = args.project.split('/')[-1]
 
     if metric == 'emails':
-        module = None  # When retrieving via emails it looks like Stackalytics tries to find only emails with [module] in the title.
+        # When retrieving via emails it looks like Stackalytics tries to
+        # find only emails with [module] in the title
+        module = None
 
     stackalytics_args = {
         'module': module,
         'release': 'all',
         'metric': metric}
     if args.newer_than:
-        stackalytics_args['start_date'] = int(time.time() - int(args.newer_than) * 86400)  # Now - newer_than days
+        # Now - newer_than days
+        stackalytics_args['start_date'] = \
+            int(time.time() - int(args.newer_than) * 86400)
     s_result = stackalytics.engineers(**stackalytics_args)['stats']
 
     if not s_result:
-        print 'No result found from Stackalytics API for module %s and metric %s' % (module, metric)
+        error = 'No result found from Stackalytics API for module %s and ' \
+                'metric %s' % (module, metric)
+        print(error)
         return
 
     s_result_by_author = {}
@@ -412,12 +444,15 @@ def _calculate_author_time_to_merge_by_metric(points, metric):
     for author, patches in sorted(authors.items()):
         try:
             x.append(s_result_by_author[author]['metric'])
-        except KeyError:  # People don't always use the same Gerrit and Stackalytics/Launchpad user_ids
+        # People don't always use the same Gerrit and Stackalytics/Launchpad
+        # user IDs.
+        except KeyError:
             continue
 
         labels.append(author)
         colors.append(_get_color_by_core(_is_core(s_result_by_author[author])))
-        y.append(np.average(patches))  # The average of how long it took to merge the patches
+        # The average of how long it took to merge the patches
+        y.append(np.average(patches))
 
     if not x:
         print('Could not find results for %s by %s' % (authors.keys(), metric))
@@ -453,13 +488,16 @@ if not data:
 points = get_points_from_data(data)
 
 if not points:
-    print('Could not parse points from data. It is likely that the createdOn timestamp of the patches found is bogus.')
+    error = 'Could not parse points from data. It is likely that the ' \
+            'createdOn timestamp of the patches found is bogus.'
+    print(error)
     sys.exit(1)
 
 plt.style.use('fivethirtyeight')
 
 if args.newer_than:
-    print('Looking at patches and Stackalytics metrics newer than %s days, not showing the moving mean graph' % args.newer_than)
+    print('Looking at patches and Stackalytics metrics newer than %s days, '
+          'not showing the moving mean graph' % args.newer_than)
 else:
     calculate_time_to_merge_figure(points)
 
