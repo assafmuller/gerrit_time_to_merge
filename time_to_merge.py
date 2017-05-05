@@ -230,7 +230,8 @@ def get_list_of_owners(people):
 
 
 def moving_average(data, window):
-    return pandas.Series(data).rolling(window=window).mean()
+    return pandas.Series(data).rolling(
+        window=window, win_type='triang', min_periods=10).mean()
 
 
 def set_fullscreen(fig):
@@ -277,10 +278,7 @@ def calculate_time_to_merge_figure(points):
     ax.grid(axis='y')
 
     window = min(len(x) / 10, 60)
-    averages = moving_average(y, window)
-
-    # Plot the patches
-    ax.plot(x, averages)
+    ax.plot(x, moving_average(y, window))
 
     average_loc = get_average_loc([get_loc(patch) for patch in data])
     colors = [get_color(point['loc'], average_loc) for point in points]
@@ -325,9 +323,7 @@ def calculate_time_to_merge_vs_number_of_patches(points):
     ax.grid(b=False, axis='y')
 
     window = min(len(x) / 10, 60)
-    averages = moving_average(y, window)
-
-    l1 = ax.plot(x, averages)
+    l1 = ax.plot(x, moving_average(y, window))
 
     x_axis = range(0, x[-1], max(1, x[-1] / 10))  # 0 to last point, 10 hops
 
@@ -351,8 +347,7 @@ def calculate_time_to_merge_vs_number_of_patches(points):
     for date, count in sorted(y_n_patches.items()):
         yy.append(y_n_patches[date])
     patches_window = 30
-    patch_averages = moving_average(yy, patches_window)
-    l2 = ax2.plot(list(set(x)), patch_averages, color='r')
+    l2 = ax2.plot(list(set(x)), moving_average(yy, patches_window), color='r')
 
     ax3 = ax.twinx()
     ax3.grid(b=False)
