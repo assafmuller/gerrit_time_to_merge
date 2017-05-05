@@ -231,7 +231,7 @@ def get_list_of_owners(people):
 
 def moving_average(data, window):
     return pandas.Series(data).rolling(
-        window=window, win_type='triang', min_periods=10).mean()
+        window=window, win_type='triang', min_periods=min(window, 10)).mean()
 
 
 def set_fullscreen(fig):
